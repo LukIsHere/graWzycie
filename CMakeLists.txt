@@ -11,7 +11,7 @@ include_directories(graWzycie include)
 
 
 if (WIN32)
-
+set_property(TARGET graWzycie PROPERTY WIN32_EXECUTABLE true)
 endif (WIN32)
 
 if (UNIX)

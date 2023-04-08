@@ -812,7 +812,7 @@ dsl::ctxTemplate<color>::ctxTemplate(ctxTemplate &cp)
 template <typename color>
 dsl::ctxTemplate<color>::~ctxTemplate()
 {
-    delete[] img;
+    delete [] img;
 }
 template <typename color>
 void dsl::ctxTemplate<color>::fillRect(int32_t x, int32_t y, uint32_t w, uint32_t h, color c)

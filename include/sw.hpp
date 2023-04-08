@@ -1,10 +1,45 @@
+/*
+a great pice of code part of
+dsl diffrent standard library
+(wip as i write it so no links)
+
+coded and delivered by L team
+code by luk the oop programmer
+debbugged by zoz the glaceon
+(not really since he is just
+pokemon in the game but we
+can treat him as a rubber
+duck right?)
+
+it may break everything it touches
+or something i dont know why
+some people state that in their
+comment thingies but yes
+
+also no touch touch credits
+without premission but if
+you want you can modify code
+itself so yes i hope it's
+helpfull my guy and you
+will be able to make great
+things with it
+*/
+/*
+    hello aditional info here
+    this header file on linux
+    requiers libx11-dev to be
+    to be installed and have
+    to be compiled with flags
+    -lX11 -pthread
+*/
 #pragma once
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #include <windowsx.h>
 #else
 #include <X11/Xlib.h>
+#include <X11/XKBlib.h>
 #include <X11/Xutil.h>
 #endif
 
@@ -14,74 +49,116 @@
 #include <functional>
 #include <thread>
 
-struct mousePos{
-    int32_t x;
-    int32_t y;
-};
 
-#ifdef _WIN32
+namespace dsl{
+    struct mousePos{
+        int32_t x;
+        int32_t y;
+    };
 
-#endif
+    class simpleWindow{
+            //zmienne okna
+            #ifdef _WIN32
+            HWND hwnd;
+            WNDCLASSEX wc;
+            static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+        private:
+            #else
+            Display *display;
+            int screen;
+            Window window;
+            XImage *image;
+            GC gc;
+            Atom wmDeleteMessage;
+            #endif
+            //watki i bezpieczenstwo
+            Lock mutex;
+            std::thread* eventThread;
+            std::thread* graphicThread;
+            //mysz
+            bool isMouseDown = false;
+            mousePos lastMousePosition = {0, 0};
+            mousePos currentMousePosition = {0, 0};
+            //klawiatura
+            bool keys[256] = { false };
+            //dziala
+            bool running = true;
+            //kontekst
+            dsl::ctx8888 ctx;
+            //eventy
+            std::function<void(dsl::ctx8888&)> frame = [](dsl::ctx8888& ctx){};
+            std::function<void(dsl::ctx8888&,char)> keyDown = [](dsl::ctx8888& ctx,char key){};
+            std::function<void(dsl::ctx8888&,char)> keyUp = [](dsl::ctx8888& ctx,char key){};
+            std::function<void(dsl::ctx8888&,mousePos)> mouseDown = [](dsl::ctx8888& ctx,mousePos mouse){};
+            std::function<void(dsl::ctx8888&,mousePos)> mouseUp = [](dsl::ctx8888& ctx,mousePos mouse){};
+            std::function<void(dsl::ctx8888&,mousePos)> mouseMove = [](dsl::ctx8888& ctx,mousePos mouse){};
+            bool isRunning();
+        public:
+            const uint32_t width;
+            const uint32_t height;
+            //konstruktor
+            simpleWindow(uint32_t width,uint32_t height,const char* name = " ");
+            ~simpleWindow();
+            //klawisze
+            bool isKeyDown(char key){return keys[key];};
+            //zamyka okno
+            void close();
+            //zwrace kontekst
+            dsl::ctx8888& getCTX(){return ctx;};
+            //dodaje callback
+            void setFrame(std::function<void(dsl::ctx8888&)> frame);
+            //nie jestem pewien czym char będzie na jakim systemie
+            //bo narazie nie skończyłem implementacji ale kiedy klikniesz
+            //guzik to informuje że to zrobiłeś
+            void setKeyDown(std::function<void(dsl::ctx8888&,char)> keyDown);
+            void setKeyUp(std::function<void(dsl::ctx8888&,char)> keyDown);
+            void setMouseDown(std::function<void(dsl::ctx8888&,mousePos)> mouseDown);
+            void setMouseUp(std::function<void(dsl::ctx8888&,mousePos)> mouseUp);
+            void setMouseMove(std::function<void(dsl::ctx8888&,mousePos)> mouseMove);
+            //możesz wywołąć na oknie
+            void move(mousePos p);//to implement
+            //sprawdza czy okno jest otwarte
+            
+            //czeka na zamkniecie okna
+            void wait();
+            //wywoluje event
+            void tframe(){
+                WriteLock lock(mutex);
+                frame(ctx);
+            }
+            void tkeyDown(char c){
+                WriteLock lock(mutex);
+                keyDown(ctx,c);
+            };
+            void tkeyUp(char c){
+                WriteLock lock(mutex);
+                keyUp(ctx,c);
+            };
+            void tmouseDown(mousePos p){
+                WriteLock lock(mutex);
+                mouseDown(ctx,p);
+            };
+            void tmouseUp(mousePos p){
+                WriteLock lock(mutex);
+                mouseUp(ctx,p);
+            };
+            void tmouseMove(mousePos p){
+                WriteLock lock(mutex);
+                mouseMove(ctx,p);
+            };
+    };
+}
 
-class simpleWindow{
-        //zmienne okna
-        #ifdef _WIN32
-        HWND hwnd;
-        WNDCLASSEX wc;
-        static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-        void DrawPixels();
-        #else
-        Display *display;
-        int screen;
-        Window window;
-        XImage *image;
-        GC gc;
-        #endif
-        //mouse
-        bool isMouseDown = false;
-        mousePos lastMousePosition = {0, 0};
-        mousePos currentMousePosition = {0, 0};
-        //thread Safe
-        Lock mutex;
-        //running
-        bool running = true;
-        //kontekst
-        dsl::ctx8888 ctx;
-        //eventy
-        std::function<void(dsl::ctx8888&)> frame = [](dsl::ctx8888& ctx){};
-        std::function<void(dsl::ctx8888&,char)> keyDown = [](dsl::ctx8888& ctx,char key){};
-        std::function<void(dsl::ctx8888&,mousePos)> mouseDown = [](dsl::ctx8888& ctx,mousePos mouse){};
-        std::function<void(dsl::ctx8888&,mousePos)> mouseUp = [](dsl::ctx8888& ctx,mousePos mouse){};
-        std::function<void(dsl::ctx8888&,mousePos)> mouseMove = [](dsl::ctx8888& ctx,mousePos mouse){};
-        void reffreshImg();
-    public:
-        uint32_t width;
-        uint32_t height;
-        simpleWindow(uint32_t width,uint32_t height,const char* name = " ");
-        ~simpleWindow();
-        dsl::ctx8888& getCTX(){return ctx;};
-        void setFrame(std::function<void(dsl::ctx8888&)> frame);
-        void setKeyDown(std::function<void(dsl::ctx8888&,char)> keyDown);
-        void setMouseDown(std::function<void(dsl::ctx8888&,mousePos)> mouseDown);
-        void setMouseUp(std::function<void(dsl::ctx8888&,mousePos)> mouseUp);
-        void setMouseMove(std::function<void(dsl::ctx8888&,mousePos)> mouseMove);
-        bool isRunning();
-        void wait();
-        void tframe(){frame(ctx);}
-        void tkeyDown(char c){keyDown(ctx,c);};
-        void tmouseDown(mousePos p){mouseDown(ctx,p);};
-        void tmouseUp(mousePos p){mouseUp(ctx,p);};
-        void tmouseMove(mousePos p){mouseMove(ctx,p);};
-};
+
 
 //definicje
 
 #ifdef _WIN32
 
-simpleWindow::simpleWindow(uint32_t width,uint32_t height,const char* name):ctx(width,height),width(width),height(height){
+dsl::simpleWindow::simpleWindow(uint32_t width,uint32_t height,const char* name):ctx(width,height),width(width),height(height){
     
 
-    std::thread([&](){
+    eventThread = new std::thread([&](){
         HINSTANCE hInstance = GetModuleHandle(NULL);
 
         wc = {0};
@@ -107,14 +184,18 @@ simpleWindow::simpleWindow(uint32_t width,uint32_t height,const char* name):ctx(
             CW_USEDEFAULT, CW_USEDEFAULT, adjustedWidth, adjustedHeight,
             NULL, NULL, hInstance, NULL
         );
+
+        LONG_PTR style = GetWindowLongPtr(hwnd, GWL_STYLE);
+        style &= ~WS_THICKFRAME;
+        SetWindowLongPtr(hwnd, GWL_STYLE, style);
         
         SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)this);
         
         ShowWindow(hwnd, SW_SHOWDEFAULT);
         UpdateWindow(hwnd);
         
-        std::thread([&](){
-            while(true){
+        graphicThread = new std::thread([&](){
+            while(isRunning()){
                 std::thread time([](){
                     std::this_thread::sleep_for(std::chrono::milliseconds(16));
                 });
@@ -123,47 +204,47 @@ simpleWindow::simpleWindow(uint32_t width,uint32_t height,const char* name):ctx(
                 time.join();
             }
             
-        }).detach();
+        });
         
         MSG msg = { 0 };
-        while (GetMessage(&msg, NULL, 0, 0) > 0) {
+        while (GetMessage(&msg, NULL, 0, 0) > 0&&isRunning()) {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
         
         
-    }).detach();
-
-    
-    
-    
+    });
 }
 
-simpleWindow::~simpleWindow(){
+dsl::simpleWindow::~simpleWindow(){
+    close();
+    eventThread->join();
+    UnregisterClass("simpleWindowClass", GetModuleHandle(NULL));
+
+}
+
+void dsl::simpleWindow::close(){
+    WriteLock lock(mutex);
+    if(running==false)return;
+    running = false;
+    lock.unlock();
+    graphicThread->join();
+    lock.lock();
     DestroyWindow(hwnd);
 }
 
-void simpleWindow::reffreshImg(){
-
-}
-
-void simpleWindow::DrawPixels()
-{
-
-}
-
-LRESULT CALLBACK simpleWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam){
+LRESULT CALLBACK dsl::simpleWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam){
     simpleWindow* pThis = (simpleWindow*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
     switch (uMsg) {
         case WM_DESTROY:
-            abort();
-            return 0;
+            pThis->close();
         case WM_PAINT: {
+            //odwierza obraz
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
 
             uint32_t* framebuffer = (uint32_t*)pThis->getCTX().img;
-            
+
             BITMAPINFO bmi = {};
             bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
             bmi.bmiHeader.biWidth = pThis->width;
@@ -179,33 +260,28 @@ LRESULT CALLBACK simpleWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 
             ReleaseDC(hwnd,hdc);
 
-            
-            
             EndPaint(hwnd, &ps);
-
             }
             break;
         case WM_KEYDOWN:
-            // Call tkeyDown() with the pressed key code
-            pThis->tkeyDown((char)wParam);
+            tkeyDown((char)wParam);
             break;
-
+        case WM_KEYUP:
+            tkeyUp((char)wParam);
+            break;
         case WM_LBUTTONDOWN:
         case WM_RBUTTONDOWN:
         case WM_MBUTTONDOWN:
-            // Call tmouseDown() with the mouse position
             pThis->tmouseDown({ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
             break;
 
         case WM_LBUTTONUP:
         case WM_RBUTTONUP:
         case WM_MBUTTONUP:
-            // Call tmouseUp() with the mouse position
             pThis->tmouseUp({ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
             break;
 
         case WM_MOUSEMOVE:
-            // Call tmouseMove() with the mouse position
             pThis->tmouseMove({ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
             break;
         default:
@@ -217,7 +293,7 @@ LRESULT CALLBACK simpleWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 
 #else
 
-simpleWindow::simpleWindow(uint32_t width,uint32_t height,const char* name):ctx(width,height),width(width),height(height){
+dsl::simpleWindow::simpleWindow(uint32_t width,uint32_t height,const char* name):ctx(width,height),width(width),height(height){
     display = XOpenDisplay(nullptr);
     if (display == nullptr) {
         throw std::runtime_error("Could not open display");
@@ -226,6 +302,22 @@ simpleWindow::simpleWindow(uint32_t width,uint32_t height,const char* name):ctx(
     screen = DefaultScreen(display);
     window = XCreateWindow(display, RootWindow(display, screen), 0, 0, width, height, 0, CopyFromParent, InputOutput, CopyFromParent, 0, nullptr);
 
+    //stały rozmiar okna
+    unsigned int borderWidth;
+    Window rootWindow;
+    int x, y;
+    uint32_t depth;
+    XGetGeometry(display, window, &rootWindow, &x, &y, &width, &height, &borderWidth, &depth);
+    
+    XSizeHints sizeHints;
+    sizeHints.flags = PMinSize | PMaxSize;
+    sizeHints.min_width = sizeHints.max_width = width + 2 * borderWidth;
+    sizeHints.min_height = sizeHints.max_height = height + 2 * borderWidth;
+    XSetWMNormalHints(display, window, &sizeHints);
+
+    wmDeleteMessage = XInternAtom(display, "WM_DELETE_WINDOW", False);
+    XSetWMProtocols(display, window, &wmDeleteMessage, 1);
+
     if (window == None) {
         throw std::runtime_error("Could not create window");
         XCloseDisplay(display);
@@ -233,7 +325,7 @@ simpleWindow::simpleWindow(uint32_t width,uint32_t height,const char* name):ctx(
 
     XStoreName(display, window, name);
 
-    XSelectInput(display, window, StructureNotifyMask | ExposureMask | KeyPressMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask);
+    XSelectInput(display, window, StructureNotifyMask | ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask);
     XMapWindow(display, window);
 
     XEvent eve;
@@ -245,101 +337,125 @@ simpleWindow::simpleWindow(uint32_t width,uint32_t height,const char* name):ctx(
 
     gc = XCreateGC(display, window, 0, nullptr);
 
-    std::thread([&](){
+    graphicThread = new std::thread([&](){
         while (isRunning()){
-            WriteLock(mutex);
             std::thread time([](){
                 std::this_thread::sleep_for(std::chrono::milliseconds(16));
             });
             frame(ctx);
-            reffreshImg();
+            //odswierza okno
+            WriteLock lock(mutex);
+            //XResizeWindow(display, window, width, height);
+            XFlush(display);
+            XPutImage(display, window, gc, image, 0, 0, 0, 0, width, height);
+            lock.unlock();
             time.join();
         }
-    }).detach();
+    });
 
-    std::thread([&](){
+    eventThread = new std::thread([&](){
         XEvent event;
         while (isRunning()) {
             XNextEvent(display, &event);
-            WriteLock(mutex);
             switch (event.type) {
-                case KeyPress: {
-                    char buffer[1];
-                    KeySym keysym;
-                    XLookupString(&event.xkey, buffer, sizeof(buffer), &keysym, nullptr);
-                    if (buffer[0] != '\0') {
-                        keyDown(ctx, buffer[0]);
-                    }
+                case KeyPress:{
+                    char key = XkbKeycodeToKeysym(display, event.xkey.keycode, 0, 0);
+                    tkeyDown(key);
+                    break;
+                }
+                case KeyRelease:{
+                    char key = XkbKeycodeToKeysym(display, event.xkey.keycode, 0, 0);
+                    tkeyUp(key);
                     break;
                 }
                 case ButtonPress: {
                     isMouseDown = true;
                     lastMousePosition.x = event.xbutton.x;
                     lastMousePosition.y = event.xbutton.y;
-                    mouseDown(ctx, lastMousePosition);
+                    tmouseDown(lastMousePosition);
                     break;
                 }
                 case ButtonRelease: {
                     isMouseDown = false;
                     lastMousePosition.x = event.xbutton.x;
                     lastMousePosition.y = event.xbutton.y;
-                    mouseUp(ctx, lastMousePosition);
+                    tmouseUp(lastMousePosition);
                     break;
                 }
                 case MotionNotify: {
                     currentMousePosition.x = event.xmotion.x;
                     currentMousePosition.y = event.xmotion.y;
-                    mouseMove(ctx, currentMousePosition);
+                    tmouseMove(currentMousePosition);
                     lastMousePosition.x = currentMousePosition.x;
                     lastMousePosition.y = currentMousePosition.y;
                     break;
                 }
+                case ClientMessage:
+                    if (event.xclient.message_type == XInternAtom(display, "WM_PROTOCOLS", True)
+                        && (Atom)event.xclient.data.l[0] == XInternAtom(display, "WM_DELETE_WINDOW", False)) {
+                        close();
+                        return;
+                        break;
+                    }
             }
         }
-    }).detach();
+    });
     
 };
-simpleWindow::~simpleWindow(){
-    WriteLock(mutex);
-    running = false;
+dsl::simpleWindow::~simpleWindow(){
+    close();
+    eventThread->join();
 }
 
-void simpleWindow::reffreshImg(){
-    XResizeWindow(display, window, width, height);
-    XFlush(display);
-    XPutImage(display, window, gc, image, 0, 0, 0, 0, width, height);
+void dsl::simpleWindow::close(){
+    WriteLock lock(mutex);
+    if(running==false)return;
+    running = false;
+    lock.unlock();
+    graphicThread->join();
+    lock.lock();
+    XDestroyWindow(display, window);
+    image->data = nullptr;
+    XDestroyImage(image);
+    XFreeGC(display, gc);
+    XCloseDisplay(display);
 }
 
 #endif
 
-bool simpleWindow::isRunning(){
-    WriteLock(mutex);
+bool dsl::simpleWindow::isRunning(){
+    WriteLock lock(mutex);
     return running;
 }
 
-void simpleWindow::setFrame(std::function<void(dsl::ctx8888&)> frame){
-    WriteLock(mutex);
+void dsl::simpleWindow::setFrame(std::function<void(dsl::ctx8888&)> frame){
+    WriteLock lock(mutex);
     this->frame = frame;
 };
-void simpleWindow::setKeyDown(std::function<void(dsl::ctx8888&,char)> keyDown){
-    WriteLock(mutex);
+void dsl::simpleWindow::setKeyDown(std::function<void(dsl::ctx8888&,char)> keyDown){
+    WriteLock lock(mutex);
     this->keyDown = keyDown;
 };
-void simpleWindow::setMouseDown(std::function<void(dsl::ctx8888&,mousePos)> mouseDown){
-    WriteLock(mutex);
+void dsl::simpleWindow::setKeyUp(std::function<void(dsl::ctx8888&,char)> keyUp){
+    WriteLock lock(mutex);
+    this->keyUp = keyUp;
+};
+void dsl::simpleWindow::setMouseDown(std::function<void(dsl::ctx8888&,mousePos)> mouseDown){
+    WriteLock lock(mutex);
     this->mouseDown = mouseDown;
 };
-void simpleWindow::setMouseUp(std::function<void(dsl::ctx8888&,mousePos)> mouseUp){
-    WriteLock(mutex);
+void dsl::simpleWindow::setMouseUp(std::function<void(dsl::ctx8888&,mousePos)> mouseUp){
+    WriteLock lock(mutex);
     this->mouseUp = mouseUp;
 };
-void simpleWindow::setMouseMove(std::function<void(dsl::ctx8888&,mousePos)> mouseMove){
-    WriteLock(mutex);
+void dsl::simpleWindow::setMouseMove(std::function<void(dsl::ctx8888&,mousePos)> mouseMove){
+    WriteLock lock(mutex);
     this->mouseMove = mouseMove;
 };
 
-void simpleWindow::wait(){
-    while (isRunning()){
+void dsl::simpleWindow::wait(){
+    while (true){
+        if(!isRunning())return;
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }

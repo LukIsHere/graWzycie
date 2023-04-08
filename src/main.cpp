@@ -2,6 +2,8 @@
 #include <iostream>
 #include "random"
 
+using namespace dsl;
+
 const uint16_t height = 50;
 const uint16_t width = 50;
 
@@ -107,7 +109,7 @@ mousePos last;
 
 bool down = false;
 
-void mouseDown(dsl::ctx8888& ctx,mousePos pos){
+void mouseDown(ctx8888& ctx,mousePos pos){
     down = true;
     if(pos.y<height*10){
         
@@ -155,7 +157,11 @@ void mouseMove(dsl::ctx8888& ctx,mousePos pos){
     }
 }
 
+void keyUp(dsl::ctx8888& ctx,char key){
+    std::cout << "UP key : " << key << std::endl;
+}
 void keyDown(dsl::ctx8888& ctx,char key){
+    std::cout << "DOWN key : " << key << std::endl;
     randomize();
 }
 
@@ -170,5 +176,21 @@ int main(){
     window.setMouseUp(mouseUp);
     window.setMouseMove(mouseMove);
     window.setKeyDown(keyDown);
+    window.setKeyUp(keyUp);
     window.wait();
+    std::cout << "papa" << std::endl;
+    
+    return 0;
 }
+
+
+#ifdef _WIN32
+//brak terminala w windows
+#include <windows.h>
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
+    return main();
+}
+
+#endif
